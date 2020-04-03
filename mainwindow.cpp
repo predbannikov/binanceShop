@@ -9,6 +9,20 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     MessageProcess msgProc;
 
+#if defined(Q_OS_WIN)
+    if(!QFile::exists(".\\config")) {
+        QDir dir;
+        dir.mkdir(".\\config");
+    }
+    if(!QFile::exists(".\\config\\trades")) {
+        QDir dir;
+        dir.mkdir(".\\config\\trades");
+    }
+    if(!QFile::exists(".\\config\\history")) {
+        QDir dir;
+        dir.mkdir((".\\config\\history"));
+    }
+#elif defined(Q_OS_LINUX)
     if(!QFile::exists("./config")) {
         QDir dir;
         dir.mkdir("./config");
@@ -21,6 +35,8 @@ MainWindow::MainWindow(QWidget *parent) :
         QDir dir;
         dir.mkdir(("./config/history"));
     }
+#endif
+
 
 
     if(!loadConfig(msgProc)){
@@ -184,7 +200,7 @@ bool MainWindow::loadConfig(MessageProcess &msgProc)
 {
     QString pathConfig;
 #if defined(Q_OS_WIN)
-    pathConfig = "config\\config.json";
+    pathConfig = ".\\config\\config.json";
 #elif defined(Q_OS_LINUX)
     pathConfig = "./config/config.json";
 #endif
@@ -210,7 +226,7 @@ QStringList MainWindow::loadFavorits()
 {
     QString pathConfig;
 #if defined(Q_OS_WIN)
-    pathConfig = "config\\favorits";
+    pathConfig = ".\\config\\favorits";
 #elif defined(Q_OS_LINUX)
     pathConfig = "./config/favorits";
 #endif
@@ -235,13 +251,9 @@ QStringList MainWindow::loadFavorits()
 
 void MainWindow::saveConfig()
 {
-    if(!QFile::exists("./config")) {
-        QDir dir;
-        dir.mkdir("./config");
-    }
     QString pathConfig;
 #if defined(Q_OS_WIN)
-    pathConfig = "config\\config.json";
+    pathConfig = ".\\config\\config.json";
 #elif defined(Q_OS_LINUX)
     pathConfig = "./config/config.json";
 #endif
@@ -252,8 +264,8 @@ void MainWindow::saveConfig()
         return;
     }
     QJsonObject jobj;
-    jobj["api_key"] = userData.api_key;
-    jobj["secret_key"] = userData.secret_key;
+    jobj["api_key"] = ui->leApiKey->text();
+    jobj["secret_key"] = ui->leSecretKey->text();
     QJsonDocument jdoc(jobj);
     fileConfig.write(jdoc.toJson());
     fileConfig.close();
@@ -264,7 +276,11 @@ void MainWindow::receivTradeList(QJsonArray jarray)
     QString message;
     for(int i = 0; i < jarray.size(); i++) {
         QJsonObject jobj = jarray[i].toObject();
+#if defined(Q_OS_WIN)
+        QString pathFile = ".\\config\\trades\\";
+#elif defined(Q_OS_LINUX)
         QString pathFile = "./config/trades/";
+#endif
         pathFile.append(jobj["symbol"].toString());
         QFile file(pathFile);
         if(!file.open(QFile::WriteOnly | QFile::Text)) {
@@ -466,7 +482,12 @@ void MainWindow::receivAllTradesOfPair(QJsonArray jarray, QString symbol)
 QJsonObject MainWindow::readHistory(QString symbol)                                                         // READ
 {
 //    QStringList listFiles = QDir(path).entryList(QDir::Files, QDir::NoSort);
+#if defined(Q_OS_WIN)
+    QFile file(".\\config\\history\\" + symbol);
+#elif defined(Q_OS_LINUX)
     QFile file("./config/history/" + symbol);
+#endif
+
 
     if(!file.open(QFile::ReadOnly | QFile::Text)) {
         QString msg = QString("Not open file %1 for read").arg(symbol);
@@ -482,8 +503,11 @@ QJsonObject MainWindow::readHistory(QString symbol)                             
 
 void MainWindow::writeHistory(QJsonObject jobj, QString symbol)                                             // WRITE
 {
+#if defined(Q_OS_WIN)
+    QFile file(".\\config\\history\\" + symbol);
+#elif defined(Q_OS_LINUX)
     QFile file("./config/history/" + symbol);
-
+#endif
     if(!file.open(QFile::WriteOnly | QFile::Text)) {
         QString msg = QString("Not open file %1 for read").arg(jobj["data"].toArray().last()["symbol"].toString());
         qDebug() << msg;
@@ -527,7 +551,11 @@ void MainWindow::updateHistory()
     for(int i = 0; i < favorits.size(); i++) {
         QString lastTimeStr;
         qint64 lastTime = 0;
+#if defined(Q_OS_WIN)
+        QString path = ".\\config\\history\\";
+#elif defined(Q_OS_LINUX)
         QString path = "./config/history/";
+#endif
         path.append(favorits[i]);
         qDebug() << "updateHistory " << favorits[i];
         if(!QFile::exists(path)) {
